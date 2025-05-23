@@ -1,45 +1,27 @@
 import streamlit as st
 import joblib
 import os
-from pathlib import Path
 
-# Configuración de rutas
-current_dir = Path(__file__).parent
+# Cargar SOLO el modelo necesario
+@st.cache_resource
+def load_model():
+    model_path = os.path.join(os.path.dirname(__file__), "modelo-reg-tree-knn-nn.pkl")
+    return joblib.load(model_path)  # Carga el modelo
 
-try:
-    # Carga de modelos con nombres correctos
-    def load_model(name):
-        path = current_dir / name
-        if not path.exists():
-            st.error(f"❌ Archivo no encontrado: {path}")
-            st.stop()
-        return joblib.load(path)
+modelo = load_model()
 
-    # Cargar modelos con los nombres exactos
-    model_tree = load_model("modelo-clas-tree.pkl")  # Árbol de clasificación
-    model_knn = load_model("modelo-reg-tree-knn-nn.pkl")[1]  # KNN
-    model_rl = load_model("modelo-clas-tree-RL.pkl")[1]  # Regresión Logística
+# Interfaz mínima
+st.title("🚗 Predicción de Riesgo")
+edad = st.slider("Edad", 18, 100)
+tipo = st.selectbox("Tipo de vehículo", ["Familiar", "Deportivo", "Combi", "Minivan"])
 
-    # Interfaz de usuario
-    st.title("🛡️ Predicción de Riesgo Vehicular")
-    edad = st.slider("Edad del conductor", 18, 100, 30)
-    tipo = st.selectbox("Tipo de vehículo", ["Familiar", "Deportivo", "Combi", "Minivan"])
+if st.button("Predecir"):
+    # Preparar inputs (ajusta según tu modelo)
+    inputs = [[edad, 1 if tipo == "Combi" else 0, 
+               1 if tipo == "Familiar" else 0, 
+               1 if tipo == "Minivan" else 0, 
+               1 if tipo == "Deportivo" else 0]]
     
-    if st.button("🔮 Predecir riesgo"):
-        # Preparar inputs
-        inputs = [[
-            edad,
-            1 if tipo == "Combi" else 0,
-            1 if tipo == "Familiar" else 0,
-            1 if tipo == "Minivan" else 0,
-            1 if tipo == "Deportivo" else 0
-        ]]
-        
-        # Predicción con Árbol de Decisión (ejemplo)
-        riesgo = model_tree[0].predict(inputs)[0]
-        nivel_riesgo = model_tree[1].inverse_transform([riesgo])[0]
-        
-        st.success(f"✅ Nivel de riesgo predicho: {nivel_riesgo.upper()}")
-
-except Exception as e:
-    st.error(f"⚠️ Error: {str(e)}")
+    # Predicción (ajusta según tu modelo)
+    riesgo = modelo.predict(inputs)[0]
+    st.success(f"Riesgo: {'Alto' if riesgo == 2 else 'Medio' if riesgo == 1 else 'Bajo'}")
